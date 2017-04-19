@@ -25,7 +25,7 @@
  *
  *
  *
- *  Program: Simulator for a rectangular robot
+ *  Program: Random Walker for Turtlebot
  *
  *
  */
@@ -43,12 +43,14 @@
 #include "sensor_msgs/LaserScan.h"
 #include "geometry_msgs/Twist.h"
 
-
+/**
+ * @brief      Class for walker.
+ */
 class Walker {
-  public:
+ public:
     Walker(ros::NodeHandle& n);
     void callback(const sensor_msgs::LaserScan::ConstPtr& input);
-  private:
+ private:
     float obsDist;
     bool forward;
     ros::Subscriber subLaser;
@@ -56,6 +58,11 @@ class Walker {
     geometry_msgs::Twist twist;
 };  //  End of class
 
+/**
+ * @brief      Callback for the subscriber
+ *
+ * @param[in]  input  Message received over /scan topic
+ */
 void Walker::callback(const sensor_msgs::LaserScan::ConstPtr& input) {
   float min = 0;
   for (int i = 0; i < input->ranges.size(); i++) {
@@ -68,12 +75,18 @@ void Walker::callback(const sensor_msgs::LaserScan::ConstPtr& input) {
 
 
 
-
+/**
+ * @brief      Constructs the object and 
+ *             generates velocity commands
+ *
+ * @param      n     Nodehandle
+ */
 Walker::Walker(ros::NodeHandle& n) {
   subLaser = n.subscribe("/scan", 1000, &Walker::callback, this);
   pub = n.advertise<geometry_msgs::Twist>("/mobile_base/commands/velocity", 1);
   ros::Rate loop_rate(2);
   while (n.ok()) {
+    //  Twist message is initiated
     twist.linear.x = 0.0;
     twist.linear.y = 0.0;
     twist.linear.z = 0.0;
@@ -81,9 +94,11 @@ Walker::Walker(ros::NodeHandle& n) {
     twist.angular.y = 0.0;
     twist.angular.z = 0.0;
     if (obsDist > 0.8) {
+      //  Linear motion in forward direction
       twist.linear.x = 0.1;
       ROS_INFO("Distance: %0.1f Moving Forward", obsDist);
     } else {
+      //  2D Rotation
       twist.angular.z = 1.5;
       ROS_INFO("Distance: %0.1f Turning", obsDist);
     }
@@ -92,6 +107,15 @@ Walker::Walker(ros::NodeHandle& n) {
     loop_rate.sleep();
   }
 }
+
+/**
+ * @brief      Execution starts here
+ *
+ * @param[in]  argc  The argc
+ * @param      argv  The argv
+ *
+ * @return     Returns 0 upon successful execution
+ */
 int main(int argc, char **argv) {
   ros::init(argc, argv, "walker");
   ros::NodeHandle n;

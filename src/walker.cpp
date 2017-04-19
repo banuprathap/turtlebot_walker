@@ -48,7 +48,7 @@
  */
 class Walker {
  public:
-    Walker(ros::NodeHandle& n);
+    explicit Walker(ros::NodeHandle& n);
     void callback(const sensor_msgs::LaserScan::ConstPtr& input);
  private:
     float obsDist;

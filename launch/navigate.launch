@@ -1,5 +1,7 @@
 <launch>
-	<arg name="world_file" default="$(find turtlebot_gazebo)/worlds/playground.world"/>
+	<arg name="world_file" 
+		default="$(find turtlebot_gazebo)/worlds/playground.world"/>
+	<arg name="enable_record" default="false"/>
       <include file="$(find turtlebot_gazebo)/launch/turtlebot_world.launch">
       	 <arg name="world_file" value="$(arg world_file)"/>
       </include>
@@ -8,4 +10,9 @@
      <node name="walker" pkg="turtlebot_walker" type="walker_node" 
      	output="screen">
      </node>
+
+     <node name="record" pkg="rosbag" type="record"
+        args="-a -O $(find turtlebot_walker)/results/recording.bag -x /camera/(.*)"
+        if="$(arg enable_record)" />
+
 </launch>

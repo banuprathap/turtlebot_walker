@@ -48,8 +48,6 @@ class Walker {
   public:
     Walker(ros::NodeHandle& n);
     void callback(const sensor_msgs::LaserScan::ConstPtr& input);
-    void move();
-
   private:
     float obsDist;
     bool forward;
@@ -66,42 +64,31 @@ void Walker::callback(const sensor_msgs::LaserScan::ConstPtr& input) {
   }
   obsDist = min;
   ROS_INFO("Distance Ahead %0.1f", obsDist);
-  move();
 }
 
-void Walker::move() {
-  ros::spinOnce();
-  if (obsDist < 0.8) {
-    twist.linear.x = 0.1;
-    ROS_INFO("Distance: %0.1f Moving Forward", obsDist);
-  } else {
-    twist.angular.z = 0.5;
-    ROS_INFO("Distance: %0.1f Turning", obsDist);
-  }
-  pub.publish(twist);
-}
+
 
 
 Walker::Walker(ros::NodeHandle& n) {
   subLaser = n.subscribe("/scan", 1000, &Walker::callback, this);
   pub = n.advertise<geometry_msgs::Twist>("/mobile_base/commands/velocity", 1);
-  ros::Rate loop_rate(10);
+  ros::Rate loop_rate(2);
   while (n.ok()) {
-    ros::spinOnce();
     twist.linear.x = 0.0;
     twist.linear.y = 0.0;
     twist.linear.z = 0.0;
     twist.angular.x = 0.0;
     twist.angular.y = 0.0;
     twist.angular.z = 0.0;
-    if (obsDist < 1.0) {
-      twist.linear.x = 0.5;
+    if (obsDist > 0.8) {
+      twist.linear.x = 0.1;
       ROS_INFO("Distance: %0.1f Moving Forward", obsDist);
     } else {
-      twist.angular.z = 0.5;
+      twist.angular.z = 1.5;
       ROS_INFO("Distance: %0.1f Turning", obsDist);
     }
     pub.publish(twist);
+    ros::spinOnce();
     loop_rate.sleep();
   }
 }

@@ -41,29 +41,73 @@
 #include "ros/ros.h"
 #include "std_msgs/String.h"
 #include "sensor_msgs/LaserScan.h"
+#include "geometry_msgs/Twist.h"
+
 
 class Walker {
   public:
-    Walker() {
-      sub = n.subscribe("/scan", 1000, &Walker::callback, this);
-    }
-    void callback(const sensor_msgs::LaserScan::ConstPtr& input) {
-      ROS_INFO("RANGE SIZE %ld", input->ranges.size());
-    }
+    Walker(ros::NodeHandle& n);
+    void callback(const sensor_msgs::LaserScan::ConstPtr& input);
+    void move();
+
   private:
-    ros::NodeHandle n;
-    ros::Subscriber sub;
+    float obsDist;
+    bool forward;
+    ros::Subscriber subLaser;
+    ros::Publisher pub;
+    geometry_msgs::Twist twist;
 };  //  End of class
 
-void chatterCallback(const std_msgs::String::ConstPtr& msg) {
-  ROS_INFO("I heard: %s", msg->data.c_str());
+void Walker::callback(const sensor_msgs::LaserScan::ConstPtr& input) {
+  float min = 0;
+  for (int i = 0; i < input->ranges.size(); i++) {
+    if (input->ranges[i] > min)
+      min = input->ranges[i];
+  }
+  obsDist = min;
+  ROS_INFO("Distance Ahead %0.1f", obsDist);
+  move();
+}
+
+void Walker::move() {
+  ros::spinOnce();
+  if (obsDist < 0.8) {
+    twist.linear.x = 0.1;
+    ROS_INFO("Distance: %0.1f Moving Forward", obsDist);
+  } else {
+    twist.angular.z = 0.5;
+    ROS_INFO("Distance: %0.1f Turning", obsDist);
+  }
+  pub.publish(twist);
 }
 
 
+Walker::Walker(ros::NodeHandle& n) {
+  subLaser = n.subscribe("/scan", 1000, &Walker::callback, this);
+  pub = n.advertise<geometry_msgs::Twist>("/mobile_base/commands/velocity", 1);
+  ros::Rate loop_rate(10);
+  while (n.ok()) {
+    ros::spinOnce();
+    twist.linear.x = 0.0;
+    twist.linear.y = 0.0;
+    twist.linear.z = 0.0;
+    twist.angular.x = 0.0;
+    twist.angular.y = 0.0;
+    twist.angular.z = 0.0;
+    if (obsDist < 1.0) {
+      twist.linear.x = 0.5;
+      ROS_INFO("Distance: %0.1f Moving Forward", obsDist);
+    } else {
+      twist.angular.z = 0.5;
+      ROS_INFO("Distance: %0.1f Turning", obsDist);
+    }
+    pub.publish(twist);
+    loop_rate.sleep();
+  }
+}
 int main(int argc, char **argv) {
   ros::init(argc, argv, "walker");
-  Walker walk;
-  ros::spin();
+  ros::NodeHandle n;
+  Walker walk(n);
   return 0;
 }
-
